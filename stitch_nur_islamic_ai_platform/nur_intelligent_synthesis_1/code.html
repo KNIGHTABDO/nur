@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nur - AI for Islamic Knowledge | Thinking State</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Playfair+Display:wght@500;600;700&amp;family=Noto+Serif:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-lowest": "#0d0e0f",
+                      "tertiary-fixed": "#dae2ff",
+                      "divine-ivory": "#F9F9F9",
+                      "on-tertiary-fixed-variant": "#3e465e",
+                      "error": "#ffb4ab",
+                      "inverse-on-surface": "#303032",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-container": "#86c5b3",
+                      "midnight-glass": "#111827",
+                      "primary-fixed": "#ffe088",
+                      "on-background": "#e3e2e3",
+                      "outline-variant": "#4d4635",
+                      "error-container": "#93000a",
+                      "outline": "#99907c",
+                      "inverse-surface": "#e3e2e3",
+                      "surface-container": "#1f2021",
+                      "primary-fixed-dim": "#e9c349",
+                      "background": "#121315",
+                      "secondary-fixed-dim": "#94d3c1",
+                      "surface-container-highest": "#343536",
+                      "surface-tint": "#e9c349",
+                      "on-surface-variant": "#d0c5af",
+                      "on-secondary": "#00382e",
+                      "secondary-container": "#0b5345",
+                      "on-primary-fixed-variant": "#574500",
+                      "tertiary-fixed-dim": "#bec6e3",
+                      "tertiary": "#c6cdeb",
+                      "on-tertiary": "#283046",
+                      "secondary": "#94d3c1",
+                      "surface-dim": "#121315",
+                      "tertiary-container": "#aab2ce",
+                      "sacred-emerald": "#004D40",
+                      "surface-container-high": "#292a2b",
+                      "on-primary-container": "#554300",
+                      "surface-container-low": "#1b1c1d",
+                      "surface-variant": "#343536",
+                      "on-tertiary-container": "#3c445c",
+                      "surface": "#121315",
+                      "on-secondary-fixed": "#00201a",
+                      "surface-bright": "#38393a",
+                      "obsidian-base": "#08090A",
+                      "on-tertiary-fixed": "#131b30",
+                      "primary": "#f2ca50",
+                      "on-error": "#690005",
+                      "inverse-primary": "#735c00",
+                      "spiritual-gold": "#D4AF37",
+                      "on-secondary-fixed-variant": "#065043",
+                      "on-surface": "#e3e2e3",
+                      "on-primary": "#3c2f00",
+                      "primary-container": "#d4af37",
+                      "gold-shimmer": "#FFD700",
+                      "secondary-fixed": "#afefdd",
+                      "on-primary-fixed": "#241a00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "1rem",
+                      "lg": "2rem",
+                      "xl": "3rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "margin-safe": "32px",
+                      "unit": "8px",
+                      "stack-depth": "12px",
+                      "container-max": "1200px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Playfair Display"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Playfair Display"
+                      ],
+                      "display-lg-mobile": [
+                              "Playfair Display"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Playfair Display"
+                      ],
+                      "arabic-quote": [
+                              "Noto Serif"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "60px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "36px",
+                              {
+                                      "lineHeight": "44px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "arabic-quote": [
+                              "28px",
+                              {
+                                      "lineHeight": "48px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.4); /* midnight-glass */
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(212, 175, 55, 0.1); /* spiritual-gold */
+            border-top: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .ambient-shadow {
+            box-shadow: 0 0 40px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .shimmer-text {
+            background: linear-gradient(90deg, #D4AF37 0%, #FFD700 50%, #D4AF37 100%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shimmer 2.5s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -100% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(212, 175, 55, 0.5); }
+            100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+        }
+
+        .thinking-step {
+            opacity: 0.5;
+            transition: all 0.5s ease;
+        }
+
+        .thinking-step.active {
+            opacity: 1;
+            transform: translateX(8px);
+        }
+
+        .thinking-step.completed {
+            opacity: 0.8;
+            transform: translateX(0);
+        }
+        
+        @keyframes scaleCheck {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .step-check {
+            animation: scaleCheck 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* 3D Card Animations */
+        @keyframes floatZ1 {
+            0%, 100% { transform: translateZ(-60px) translateY(-40px); }
+            50% { transform: translateZ(-60px) translateY(-48px); }
+        }
+        @keyframes floatZ2 {
+            0%, 100% { transform: translateZ(-30px) translateY(-20px); }
+            50% { transform: translateZ(-30px) translateY(-28px); }
+        }
+        @keyframes floatZ3 {
+            0%, 100% { transform: translateZ(0px) translateY(0px); }
+            50% { transform: translateZ(0px) translateY(-8px); }
+        }
+        @keyframes floatZ4 {
+            0%, 100% { transform: translateZ(30px) translateY(20px); }
+            50% { transform: translateZ(30px) translateY(12px); }
+        }
+
+        .anim-card-1 { animation: floatZ1 8s ease-in-out infinite; }
+        .anim-card-2 { animation: floatZ2 7s ease-in-out infinite 1s; }
+        .anim-card-3 { animation: floatZ3 9s ease-in-out infinite 2s; }
+        .anim-card-4 { animation: floatZ4 8.5s ease-in-out infinite 0.5s; }
+
+        .bg-pattern {
+            background-image: radial-gradient(circle at center, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+        }
+
+        /* Light Trail Animation */
+        .light-trail {
+            stroke-dasharray: 15, 150;
+            stroke-dashoffset: 165;
+            animation: dashTrail 3.5s linear infinite;
+            stroke: #D4AF37;
+            opacity: 0.8;
+        }
+
+        @keyframes dashTrail {
+            to { stroke-dashoffset: 0; }
+        }
+    </style>
+</head>
+<body class="bg-obsidian-base text-on-surface font-body-md min-h-screen flex flex-col md:flex-row overflow-hidden">
+<!-- Desktop SideNavBar -->
+<nav class="hidden md:flex flex-col fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest/80 backdrop-blur-2xl border-r border-white/10 p-6 z-50">
+<div class="flex items-center gap-4 mb-12">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+<span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary tracking-wider">Nur</h1>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">AI for Islamic Knowledge</p>
+</div>
+</div>
+<div class="flex-1 space-y-2">
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-4 py-3 transition-all duration-300 hover:bg-white/5 hover:backdrop-blur-md rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="add_comment">add_comment</span>
+<span class="font-label-md text-label-md">New Chat</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-4 py-3 transition-all duration-300 hover:bg-white/5 hover:backdrop-blur-md rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-md text-label-md">History</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-4 py-3 transition-all duration-300 hover:bg-white/5 hover:backdrop-blur-md rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-label-md text-label-md">Bookmarks</span>
+</a>
+<a class="flex items-center gap-4 bg-primary-container/10 text-primary rounded-xl px-4 py-3 shadow-[0_0_15px_rgba(212,175,55,0.15)] border-l-2 border-primary" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-label-md text-label-md">Sources</span>
+</a>
+</div>
+<div class="mt-auto space-y-2 pt-6 border-t border-white/5">
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-4 py-3 transition-all duration-300 hover:bg-white/5 hover:backdrop-blur-md rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-4 py-3 transition-all duration-300 hover:bg-white/5 hover:backdrop-blur-md rounded-xl" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Mobile TopAppBar -->
+<header class="flex justify-between items-center w-full px-gutter py-4 max-w-container-max mx-auto md:hidden bg-gradient-to-b from-surface-container-lowest to-transparent fixed top-0 z-40">
+<h1 class="font-headline-md text-headline-md font-medium text-divine-ivory">Nur</h1>
+<div class="flex gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 md:ml-64 relative min-h-screen flex items-center justify-center p-6 bg-[url('https://images.unsplash.com/photo-1519817650390-64a93db51149?ixlib=rb-4.0.3&amp;auto=format&amp;fit=crop&amp;w=2000&amp;q=80')] bg-cover bg-center bg-no-repeat bg-blend-overlay bg-obsidian-base/90" data-alt="A deeply atmospheric, cinematic dark room with subtle, ethereal golden lighting filtering through dust motes. The space feels vast and meditative, almost like a high-tech modern sanctuary or library at night. The color palette is dominated by deep blacks, rich midnight blues, and soft, warm gold accents. The mood is spiritual, focused, and profoundly calm, with a sense of hidden, illuminated knowledge.">
+<div class="absolute inset-0 bg-pattern z-0"></div>
+<div class="max-w-container-max w-full grid grid-cols-1 lg:grid-cols-12 gap-8 z-10">
+<!-- Reasoning Panel (Left) -->
+<div class="lg:col-span-5 flex flex-col justify-center h-full">
+<div class="glass-panel rounded-2xl p-8 ambient-shadow relative overflow-hidden">
+<!-- Subtle inner glow top edge -->
+<div class="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+<div class="flex items-center gap-3 mb-8">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center pulse-glow border border-primary/50">
+<span class="material-symbols-outlined text-primary text-sm">psychology</span>
+</div>
+<h2 class="font-headline-md text-headline-md shimmer-text font-semibold tracking-wide">Nur is thinking...</h2>
+</div>
+<div class="space-y-6 pl-4 border-l border-white/5">
+<!-- Completed Step -->
+<div class="thinking-step completed flex items-start gap-4 relative">
+<div class="absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-sacred-emerald border-2 border-obsidian-base mt-1"></div>
+<span class="material-symbols-outlined text-sacred-emerald step-check" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<h3 class="font-label-md text-label-md text-divine-ivory">Understanding your question</h3>
+<p class="text-sm text-on-surface-variant mt-1">Clarifying intent and context...</p>
+</div>
+</div>
+<!-- Completed Step -->
+<div class="thinking-step completed flex items-start gap-4 relative">
+<div class="absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-sacred-emerald border-2 border-obsidian-base mt-1"></div>
+<span class="material-symbols-outlined text-sacred-emerald step-check" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div>
+<h3 class="font-label-md text-label-md text-divine-ivory">Searching the Quran</h3>
+<p class="text-sm text-on-surface-variant mt-1">Scanning relevant verses...</p>
+</div>
+</div>
+<!-- Active Step -->
+<div class="thinking-step active flex items-start gap-4 relative">
+<div class="absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-primary border-2 border-obsidian-base mt-1 shadow-[0_0_15px_rgba(212,175,55,0.8)] transition-all duration-300"></div>
+<div class="w-6 h-6 flex items-center justify-center icon-slot">
+<span class="material-symbols-outlined text-primary animate-spin text-xl">progress_activity</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary font-bold transition-colors duration-300">Searching Hadith</h3>
+<p class="text-sm text-primary/70 mt-1 transition-colors duration-300">Exploring authentic narrations...</p>
+</div>
+</div>
+<!-- Pending Step -->
+<div class="thinking-step flex items-start gap-4 relative">
+<div class="absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-white/10 border-2 border-obsidian-base mt-1 transition-all duration-300"></div>
+<span class="material-symbols-outlined text-white/20 icon-slot transition-all duration-300">radio_button_unchecked</span>
+<div>
+<h3 class="font-label-md text-label-md text-white/40 transition-colors duration-300">Reviewing Fiqh Sources</h3>
+<p class="text-sm text-white/20 mt-1 transition-colors duration-300">Consulting classical scholars...</p>
+</div>
+</div>
+<!-- Pending Step -->
+<div class="thinking-step flex items-start gap-4 relative">
+<div class="absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-white/10 border-2 border-obsidian-base mt-1 transition-all duration-300"></div>
+<span class="material-symbols-outlined text-white/20 icon-slot transition-all duration-300">radio_button_unchecked</span>
+<div>
+<h3 class="font-label-md text-label-md text-white/40 transition-colors duration-300">Synthesizing &amp; Analyzing</h3>
+<p class="text-sm text-white/20 mt-1 transition-colors duration-300">Connecting evidences...</p>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-white/5 flex justify-between items-center text-sm text-on-surface-variant">
+<span>This may take a few moments...</span>
+<div class="flex gap-1">
+<div class="w-1 h-1 rounded-full bg-primary/50 animate-bounce" style="animation-delay: 0s"></div>
+<div class="w-1 h-1 rounded-full bg-primary/50 animate-bounce" style="animation-delay: 0.2s"></div>
+<div class="w-1 h-1 rounded-full bg-primary/50 animate-bounce" style="animation-delay: 0.4s"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Visualization Panel (Right) -->
+<div class="lg:col-span-7 flex items-center justify-center relative min-h-[500px]">
+<!-- Central Focus (Rehal/Quran) placeholder -->
+<div class="absolute z-10 flex flex-col items-center">
+<div class="w-48 h-48 rounded-full bg-primary/5 blur-3xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pulse-glow"></div>
+<img alt="Quran" class="w-64 h-auto object-contain drop-shadow-[0_20px_50px_rgba(212,175,55,0.4)] z-20" data-alt="A beautiful, high-end 3D rendering of an open Quran resting on an elegant wooden rehal (book stand). The pages are illuminated from within by a soft, ethereal golden light, creating a magical, cinematic glow. The background is a dark, velvety void, allowing the illuminated book to stand out sharply. The style is highly detailed, realistic yet stylized with volumetric lighting and subtle sparkling dust particles floating around the sacred text." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVp9OjZK_HGeaYFR28aG4I7uswNTO8DMk7hNegqVDD6w4AwNKSpWHOHwiNLy9UxNrSFQ45i6vHbqjqF-RzEMGviBh06M_YeYxzh0X7IxTa1YDkzrZ1Svpw1mrY9KsR6b2oTS5DE_mUYxf8uJWi0fhwpePFZPJakpoQFon58KwRqrS630taAjgzT-oiJ-_rggh-f596gkxmrURvt2IPqqddSzyQTtRVgdnRDh6yzIhX9ZbqdfkyjMWvlaT79dQvrcJXyx1OuL0rfZI4"/>
+</div>
+<!-- Source Stack Layering -->
+<div class="absolute top-10 right-10 z-30 perspective-1000">
+<div class="relative w-64 h-80 transform-style-3d rotate-y-[-15deg] rotate-x-[10deg]">
+<!-- Card 1 (Back) -->
+<div class="absolute top-0 right-0 w-full h-24 glass-panel rounded-xl flex items-center px-4 opacity-40 border-white/5 anim-card-1">
+<span class="material-symbols-outlined text-white/50 mr-3">menu_book</span>
+<span class="font-label-md text-label-md text-white/50">Scholars</span>
+</div>
+<!-- Card 2 -->
+<div class="absolute top-10 right-5 w-full h-24 glass-panel rounded-xl flex items-center px-4 opacity-60 border-white/10 anim-card-2">
+<span class="material-symbols-outlined text-white/70 mr-3">gavel</span>
+<span class="font-label-md text-label-md text-white/70">Fiqh</span>
+</div>
+<!-- Card 3 -->
+<div class="absolute top-20 right-10 w-full h-24 glass-panel rounded-xl flex items-center px-4 opacity-80 border-white/20 anim-card-3">
+<span class="material-symbols-outlined text-divine-ivory mr-3">translate</span>
+<span class="font-label-md text-label-md text-divine-ivory">Tafsir</span>
+</div>
+<!-- Card 4 (Active/Front) -->
+<div class="absolute top-32 right-16 w-full h-24 glass-panel rounded-xl flex items-center justify-between px-4 border-primary/50 shadow-[0_10px_30px_rgba(212,175,55,0.2)] anim-card-4">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-primary mr-3" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-label-md text-label-md text-primary font-bold">Hadith</span>
+</div>
+<span class="material-symbols-outlined text-primary animate-pulse text-sm">sync</span>
+</div>
+</div>
+</div>
+<!-- Glowing connection lines with light trails -->
+<svg class="absolute inset-0 w-full h-full z-0 pointer-events-none">
+<path class="light-trail" d="M 150,250 C 250,150 350,350 450,250" fill="none" stroke-width="2"></path>
+<path class="light-trail" d="M 200,350 C 300,250 400,450 500,300" fill="none" stroke-width="1.5" style="animation-delay: -1.5s; opacity: 0.6;"></path>
+<path d="M 150,250 C 250,150 350,350 450,250" fill="none" stroke="rgba(212,175,55,0.15)" stroke-width="2"></path>
+<path d="M 200,350 C 300,250 400,450 500,300" fill="none" stroke="rgba(212,175,55,0.1)" stroke-width="1.5"></path>
+</svg>
+</div>
+</div>
+</main>
+<!-- Mobile BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-safe pt-2 md:hidden bg-surface-container-lowest/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-md text-[10px] tracking-wide">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="history">history</span>
+<span class="font-label-md text-[10px] tracking-wide">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary bg-primary/10 rounded-2xl px-6 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-label-md text-[10px] tracking-wide font-bold">Sources</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors py-2" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-label-md text-[10px] tracking-wide">Profile</span>
+</a>
+</nav>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const steps = document.querySelectorAll('.thinking-step');
+            let currentActiveIndex = 2; // Starting at 'Searching Hadith'
+
+            function advanceStep() {
+                if (currentActiveIndex >= steps.length - 1) return; // Don't advance past the end in demo
+                
+                const currentStep = steps[currentActiveIndex];
+                
+                // 1. Mark current as completed
+                currentStep.classList.remove('active');
+                currentStep.classList.add('completed');
+                
+                // Animate checkmark in
+                const iconContainer = currentStep.querySelector('.icon-slot');
+                if(iconContainer) {
+                     iconContainer.outerHTML = `<span class="material-symbols-outlined text-sacred-emerald step-check icon-slot" style="font-variation-settings: 'FILL' 1;">check_circle</span>`;
+                }
+                
+                // Update dot
+                const dot = currentStep.querySelector('.absolute');
+                if(dot) {
+                    dot.className = 'absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-sacred-emerald border-2 border-obsidian-base mt-1 transition-all duration-300';
+                }
+                
+                // Reset text color
+                const title = currentStep.querySelector('h3');
+                if(title) {
+                    title.className = 'font-label-md text-label-md text-divine-ivory transition-colors duration-300';
+                }
+                const p = currentStep.querySelector('p');
+                if(p) {
+                    p.className = 'text-sm text-on-surface-variant mt-1 transition-colors duration-300';
+                }
+
+                // 2. Move to next step
+                currentActiveIndex++;
+                if(currentActiveIndex < steps.length) {
+                    const nextStep = steps[currentActiveIndex];
+                    nextStep.classList.add('active');
+                    
+                    // Activate dot
+                    const nextDot = nextStep.querySelector('.absolute');
+                    if(nextDot) {
+                        nextDot.className = 'absolute -left-[21px] w-[10px] h-[10px] rounded-full bg-primary border-2 border-obsidian-base mt-1 shadow-[0_0_15px_rgba(212,175,55,0.8)] transition-all duration-300';
+                    }
+                    
+                    // Add spinner
+                    const nextIcon = nextStep.querySelector('.icon-slot');
+                    if(nextIcon) {
+                        nextIcon.outerHTML = `<div class="w-6 h-6 flex items-center justify-center icon-slot"><span class="material-symbols-outlined text-primary animate-spin text-xl">progress_activity</span></div>`;
+                    }
+                    
+                    // Highlight text
+                    const nextTitle = nextStep.querySelector('h3');
+                    if(nextTitle) {
+                        nextTitle.className = 'font-label-md text-label-md text-primary font-bold transition-colors duration-300';
+                    }
+                    const nextP = nextStep.querySelector('p');
+                    if(nextP) {
+                        nextP.className = 'text-sm text-primary/70 mt-1 transition-colors duration-300';
+                    }
+
+                    // Schedule next advancement
+                    setTimeout(advanceStep, 4000);
+                }
+            }
+
+            // Start the sequence
+            setTimeout(advanceStep, 4000);
+        });
+    </script>
+</body></html>
