@@ -37,6 +37,21 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onSelectSession }) => 
     setSessions({});
   };
 
+  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click event from navigating
+    const raw = localStorage.getItem("nur_chat_sessions");
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        delete parsed[id];
+        localStorage.setItem("nur_chat_sessions", JSON.stringify(parsed));
+        setSessions(parsed);
+      } catch (err) {
+        console.error("Failed to delete chat session", err);
+      }
+    }
+  };
+
   const sessionIds = Object.keys(sessions).filter(id => sessions[id] && sessions[id].length > 0).sort((a, b) => {
     const firstMsgA = sessions[a][0];
     const firstMsgB = sessions[b][0];
@@ -71,10 +86,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onSelectSession }) => 
             const firstMsg = sessions[id][0];
             if (!firstMsg) return null;
             return (
-              <button
+              <div
                 key={id}
                 onClick={() => onSelectSession(id)}
-                className="glass-card w-full p-5 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all text-left border border-white/5 group"
+                className="glass-card w-full p-5 rounded-xl flex items-center justify-between hover:bg-white/5 transition-all text-left border border-white/5 group cursor-pointer"
               >
                 <div className="flex flex-col gap-1.5 flex-1 pr-4">
                   <p className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors font-light line-clamp-1">
@@ -86,10 +101,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onSelectSession }) => 
                     <span>{sessions[id].length} Message{sessions[id].length > 1 ? "s" : ""}</span>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-all opacity-40 group-hover:opacity-100 transform group-hover:translate-x-1">
-                  arrow_forward
-                </span>
-              </button>
+                <div className="flex items-center gap-3 relative z-10">
+                  <button 
+                    onClick={(e) => handleDeleteSession(id, e)}
+                    className="w-9 h-9 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all flex items-center justify-center opacity-40 group-hover:opacity-100"
+                    title="Delete Chat Session"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                  <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-all opacity-40 group-hover:opacity-100 transform group-hover:translate-x-1">
+                    arrow_forward
+                  </span>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -347,16 +371,25 @@ export const ProfileView: React.FC = () => {
 // ==========================================
 export const SettingsView: React.FC = () => {
   const [apiKey, setApiKey] = useState("");
+  const [groqApiKey, setGroqApiKey] = useState("");
+  const [defaultEngine, setDefaultEngine] = useState("groq");
   const [calendar, setCalendar] = useState("Umm al-Qura Calendar, Saudi Arabia");
   const [showNotification, setShowNotification] = useState(false);
 
+  const isGeminiEnvActive = !!import.meta.env.VITE_GEMINI_API_KEY;
+  const isGroqEnvActive = !!import.meta.env.VITE_GROQ_API_KEY;
+
   useEffect(() => {
     setApiKey(localStorage.getItem(KEYS.API_KEY) || "");
+    setGroqApiKey(localStorage.getItem("nur_groq_api_key") || "");
+    setDefaultEngine(localStorage.getItem("nur_default_engine") || "groq");
     setCalendar(localStorage.getItem(KEYS.CALENDAR) || "Umm al-Qura Calendar, Saudi Arabia");
   }, []);
 
   const handleSave = () => {
     localStorage.setItem(KEYS.API_KEY, apiKey);
+    localStorage.setItem("nur_groq_api_key", groqApiKey);
+    localStorage.setItem("nur_default_engine", defaultEngine);
     localStorage.setItem(KEYS.CALENDAR, calendar);
     setShowNotification(true);
     setTimeout(() => setShowNotification(false), 3000);
@@ -378,16 +411,66 @@ export const SettingsView: React.FC = () => {
             AI Engine Credentials
           </h3>
           
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <label className="font-label-md text-label-md text-divine-ivory font-medium">Gemini Developer API Key</label>
+                {isGeminiEnvActive && (
+                  <span className="bg-sacred-emerald/20 border border-sacred-emerald/30 text-sacred-emerald text-[10px] uppercase tracking-wider font-semibold rounded-full px-2 py-0.5">
+                    ✓ Server Env Active
+                  </span>
+                )}
+              </div>
+              <input 
+                type="password"
+                className="bg-midnight-glass border border-white/10 rounded-xl px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary/50 mt-1 w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                placeholder={isGeminiEnvActive ? "Configured in server environment (.env)..." : "Paste your Gemini API key here..."}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                disabled={isGeminiEnvActive}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <label className="font-label-md text-label-md text-divine-ivory font-medium">Groq Developer API Key</label>
+                {isGroqEnvActive && (
+                  <span className="bg-sacred-emerald/20 border border-sacred-emerald/30 text-sacred-emerald text-[10px] uppercase tracking-wider font-semibold rounded-full px-2 py-0.5">
+                    ✓ Server Env Active
+                  </span>
+                )}
+              </div>
+              <input 
+                type="password"
+                className="bg-midnight-glass border border-white/10 rounded-xl px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary/50 mt-1 w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                placeholder={isGroqEnvActive ? "Configured in server environment (.env)..." : "Paste your Groq API key here..."}
+                value={groqApiKey}
+                onChange={(e) => setGroqApiKey(e.target.value)}
+                disabled={isGroqEnvActive}
+              />
+              <p className="text-[11px] text-on-surface-variant/70 mt-1">Credentials can be supplied in browser local storage, or statically loaded via Vercel/server `.env` environment variables.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6 relative z-10">
+          <h3 className="font-headline-md text-headline-md text-primary text-[20px] font-semibold mb-2">
+            AI Sanctuary Engine
+          </h3>
+
           <div className="flex flex-col gap-2">
-            <label className="font-label-md text-label-md text-divine-ivory font-medium">Gemini Developer API Key</label>
-            <input 
-              type="password"
+            <label className="font-label-md text-label-md text-divine-ivory font-medium">Default Primary Engine</label>
+            <select 
               className="bg-midnight-glass border border-white/10 rounded-xl px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary/50 mt-1 w-full"
-              placeholder="Paste your Gemini API key here..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <p className="text-[11px] text-on-surface-variant/70 mt-1">Saved securely to your browser's local storage. Never shared with any third party.</p>
+              value={defaultEngine}
+              onChange={(e) => setDefaultEngine(e.target.value)}
+            >
+              <option value="groq">Groq (Primary Failover Sanctuary)</option>
+              <option value="gemini">Gemini (Secondary Failover Sanctuary)</option>
+            </select>
+            <p className="text-[11px] text-on-surface-variant/70 mt-1">
+              Select which AI engine is queried first. Out-of-the-box, Nur defaults to Groq. If your selected default engine experiences rate limits (429) or has missing keys, Nur seamlessly calls the alternative failover engine instantly.
+            </p>
           </div>
         </div>
 
@@ -414,7 +497,7 @@ export const SettingsView: React.FC = () => {
         {/* Action Button */}
         <div className="flex justify-between items-center relative z-10 mt-4 pt-6 border-t border-white/5">
           {showNotification ? (
-            <span className="text-xs text-sacred-emerald font-semibold animate-pulse">✓ Preferences saved to LocalStorage</span>
+            <span className="text-xs text-sacred-emerald font-semibold animate-pulse">✓ Preferences saved successfully</span>
           ) : (
             <span />
           )}

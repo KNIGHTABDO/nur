@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { AmbientBackdrop } from "./components/AmbientBackdrop";
 import { HomeView } from "./views/HomeView";
-import { ThinkingView } from "./views/ThinkingView";
 import { ChatView } from "./views/ChatView";
 import { VoiceOverlay } from "./views/VoiceOverlay";
 import {
@@ -13,12 +12,11 @@ import {
   SettingsView,
 } from "./views/MockViews";
 import { fetchNurResponse } from "./services/gemini";
-import type { NurResponse, ChatTurn } from "./services/gemini";
+import type { ChatTurn } from "./services/gemini";
 import type { ChatMessage } from "./views/ChatView";
 
 type ViewState =
   | "home"
-  | "thinking"
   | "chat"
   | "history"
   | "bookmarks"
@@ -33,36 +31,9 @@ export const App: React.FC = () => {
   
   // Dialog session thread containing all interactive turns
   const [chatSession, setChatSession] = useState<ChatMessage[]>([]);
-  // Keep track of which message in the session is currently loading
-  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
   // Active Session Identifier
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-  // Track if the API is currently loading
-  const [isApiLoading, setIsApiLoading] = useState(false);
-  // Keep track of compiled data ready to render
-  const [pendingResponse, setPendingResponse] = useState<NurResponse | null>(null);
-
-  // Helper to determine if the query is a simple greeting or short conversational talk
-  const isSimpleConversational = (text: string): boolean => {
-    const t = text.toLowerCase().trim();
-    const greetings = [
-      "hey", "hello", "hi", "salam", "assalam", "assalamu", "peace", 
-      "who are you", "what is your name", "how are you", "good morning",
-      "good evening", "how's it going", "as-salamu", "as-salāmu"
-    ];
-    const isGreeting = greetings.some(g => t.startsWith(g) || t === g);
-    
-    const keywords = [
-      "quran", "hadith", "verse", "ayah", "surah", "ruling", "fiqh", 
-      "fatwa", "fasting", "prayer", "charity", "zakat", "hajj", "wudu", 
-      "ramadan", "prophet", "allah", "sin", "halal", "haram"
-    ];
-    const hasKeyword = keywords.some(k => t.includes(k));
-    
-    return isGreeting && !hasKeyword && t.length < 50;
-  };
 
   // Listen to native window hashchange for isolated sessions and view routing
   useEffect(() => {
@@ -123,13 +94,10 @@ export const App: React.FC = () => {
   };
 
   // Transition: Submit Query -> Kickoff Asynchronous AI fetch in parallel with thinking timers
+  // Transition: Submit Query -> Kickoff Asynchronous AI fetch
   const handleSubmitQuery = async (queryText: string) => {
     setIsVoiceActive(false);
-    setPendingResponse(null);
-    setIsApiLoading(true);
 
-    const isConversational = isSimpleConversational(queryText);
-    
     // 1. Establish the session ID
     let sessionId = activeSessionId;
     if (!sessionId) {
@@ -145,7 +113,7 @@ export const App: React.FC = () => {
       id: newMessageId,
       query: queryText,
       response: {
-        answer: isConversational ? "Nur is writing..." : "Nur is thinking...",
+        answer: "Nur is contemplating authentic sources...",
         quran: [],
         hadith: [],
         fiqh: [],
@@ -154,19 +122,11 @@ export const App: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Update session state
+    // Update session state and transition to ChatView instantly
     const updatedSession = [...chatSession, newMsg];
     setChatSession(updatedSession);
     saveSessionToLocal(sessionId, updatedSession);
-
-    if (isConversational) {
-      // For simple greetings, go straight to ChatView instantly
-      setCurrentView("chat");
-    } else {
-      // For informational searches, transition to the ThinkingView animation timeline
-      setPendingMessageId(newMessageId);
-      setCurrentView("thinking");
-    }
+    setCurrentView("chat");
 
     // Save query to legacy LocalStorage history logs for backup
     const rawHistory = localStorage.getItem("nur_chat_history") || "[]";
@@ -194,7 +154,7 @@ export const App: React.FC = () => {
     // Build multi-turn chat history context payload from this specific session only!
     const historyPayload: ChatTurn[] = [];
     chatSession.forEach(msg => {
-      if (msg.response.answer !== "Nur is writing..." && msg.response.answer !== "Nur is thinking...") {
+      if (msg.response.answer !== "Nur is writing..." && msg.response.answer !== "Nur is thinking..." && msg.response.answer !== "Nur is contemplating authentic sources...") {
         historyPayload.push({ role: "user", text: msg.query });
         historyPayload.push({ role: "model", text: JSON.stringify(msg.response) });
       }
@@ -210,13 +170,8 @@ export const App: React.FC = () => {
           ? { ...msg, response: result.response }
           : msg
       );
-
-      if (isConversational) {
-        setChatSession(finalSession);
-        saveSessionToLocal(sessionId, finalSession);
-      } else {
-        setPendingResponse(result.response);
-      }
+      setChatSession(finalSession);
+      saveSessionToLocal(sessionId, finalSession);
     } catch (err) {
       console.error("Generative AI Query failed", err);
       const errResponse = {
@@ -233,79 +188,8 @@ export const App: React.FC = () => {
       );
       setChatSession(finalSession);
       saveSessionToLocal(sessionId, finalSession);
-    } finally {
-      setIsApiLoading(false);
     }
   };
-
-  // Thinking step timeline completes
-  const handleFinishedThinking = () => {
-    if (pendingResponse && pendingMessageId && activeSessionId) {
-      const finalSession = chatSession.map(msg => 
-        msg.id === pendingMessageId 
-          ? { ...msg, response: pendingResponse }
-          : msg
-      );
-      setChatSession(finalSession);
-      saveSessionToLocal(activeSessionId, finalSession);
-      setPendingMessageId(null);
-      setCurrentView("chat");
-    } else {
-      const checkTimer = setInterval(() => {
-        const raw = localStorage.getItem("nur_gemini_api_key");
-        if (!isApiLoading || !raw) {
-          clearInterval(checkTimer);
-          const fetchResponse = (window as any).activeNurResponse || pendingResponse;
-          if (activeSessionId && pendingMessageId) {
-            if (fetchResponse) {
-              const finalSession = chatSession.map(msg => 
-                msg.id === pendingMessageId 
-                  ? { ...msg, response: fetchResponse }
-                  : msg
-              );
-              setChatSession(finalSession);
-              saveSessionToLocal(activeSessionId, finalSession);
-            } else {
-              const fallbackResponse = {
-                answer: "Connection processing delayed. Please refresh or check your API key in settings.",
-                quran: [],
-                hadith: [],
-                fiqh: ["Request timed out or encountered resolving loops."],
-                sources: [{ name: "Network Safety Timeout", url: "https://generativelanguage.googleapis.com" }]
-              };
-              const finalSession = chatSession.map(msg => 
-                msg.id === pendingMessageId 
-                  ? { ...msg, response: fallbackResponse }
-                  : msg
-              );
-              setChatSession(finalSession);
-              saveSessionToLocal(activeSessionId, finalSession);
-            }
-          }
-          setPendingMessageId(null);
-          setCurrentView("chat");
-        }
-      }, 500);
-    }
-  };
-
-  // Capture background pending responses in global ref for timing checks
-  useEffect(() => {
-    if (pendingResponse) {
-      (window as any).activeNurResponse = pendingResponse;
-      if (currentView === "thinking" && !isApiLoading && pendingMessageId && activeSessionId) {
-        const finalSession = chatSession.map(msg => 
-          msg.id === pendingMessageId 
-            ? { ...msg, response: pendingResponse }
-            : msg
-        );
-        setChatSession(finalSession);
-        saveSessionToLocal(activeSessionId, finalSession);
-        setPendingMessageId(null);
-        setCurrentView("chat");
-      }
-    }
-  }, [pendingResponse, isApiLoading, currentView, pendingMessageId, activeSessionId]);
 
   // Sidebar navigation routing via native URL hashes
   const handleNavigate = (view: string) => {
@@ -347,8 +231,9 @@ export const App: React.FC = () => {
         </button>
       )}
 
-      {/* Main Canvas view router */}
-      <main className={`flex-1 h-screen overflow-y-auto relative flex flex-col items-center justify-center px-6 pt-24 pb-32 md:py-12 z-10 transition-all duration-300 ${
+      <main className={`flex-1 h-screen overflow-y-auto relative flex flex-col items-center px-6 pt-24 pb-32 md:py-12 z-10 transition-all duration-300 ${
+        currentView === "home" ? "justify-center" : "justify-start"
+      } ${
         isSidebarCollapsed ? "md:ml-0" : "md:ml-64"
       }`}>
         {(() => {
@@ -360,8 +245,6 @@ export const App: React.FC = () => {
                   onOpenVoice={() => setIsVoiceActive(true)}
                 />
               );
-            case "thinking":
-              return <ThinkingView onFinishedThinking={handleFinishedThinking} />;
             case "chat":
               return (
                 <ChatView

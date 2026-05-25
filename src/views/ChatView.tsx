@@ -91,6 +91,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       <div className="flex-1 flex flex-col gap-8 pb-12 w-full animate-float" style={{ animationDuration: "16s" }}>
         {chatSession.map((msg) => {
           const isMsgLoading = msg.response.answer === "Nur is writing..." || msg.response.answer === "Nur is thinking...";
+          const hasSources = msg.response.sources && msg.response.sources.length > 0;
           
           return (
             <div key={msg.id} className="flex flex-col gap-8 w-full">
@@ -124,7 +125,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   /* Response Content Grid */
                   <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
                     {/* Main Text Response */}
-                    <div className="lg:col-span-8 glass-card rounded-2xl p-6 md:p-8 flex flex-col gap-6 w-full border border-white/5">
+                    <div className={`${hasSources ? "lg:col-span-8" : "lg:col-span-12"} glass-card rounded-2xl p-6 md:p-8 flex flex-col gap-6 w-full border border-white/5`}>
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
                         <span className="font-label-md text-label-md text-primary tracking-widest uppercase text-xs">
@@ -227,58 +228,60 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     </div>
 
                     {/* Source Drawer / Panel (Right) */}
-                    <div className="lg:col-span-4 flex flex-col gap-4 w-full">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-headline-md text-headline-md text-[18px] text-divine-ivory">Sources</h3>
-                        <span className="bg-surface-container-high px-2 py-1 rounded-md text-xs font-label-md text-on-surface-variant border border-white/5">
-                          {msg.response.sources.length} Found
-                        </span>
-                      </div>
-                      
-                      <div className="flex flex-col gap-3">
-                        {msg.response.sources.map((src, sIdx) => {
-                          const isQuran = src.name.toLowerCase().includes("quran") || src.name.toLowerCase().includes("surah");
-                          const isHadith = src.name.toLowerCase().includes("bukhari") || src.name.toLowerCase().includes("muslim") || src.name.toLowerCase().includes("hadith") || src.name.toLowerCase().includes("tirmidhi") || src.name.toLowerCase().includes("majah") || src.name.toLowerCase().includes("dawud");
-                          
-                          return (
-                            <a 
-                              key={sIdx} 
-                              href={src.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`glass-card p-4 rounded-xl flex items-center justify-between border border-white/5 border-l-2 hover:bg-white/5 transition-all cursor-pointer group ${
-                                isQuran 
-                                  ? "border-l-primary/30 hover:border-l-primary" 
-                                  : isHadith 
-                                    ? "border-l-sacred-emerald/30 hover:border-l-sacred-emerald" 
-                                    : "border-l-secondary-fixed-dim/30 hover:border-l-secondary-fixed-dim"
-                              }`}
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center ${
-                                  isQuran ? "text-primary" : isHadith ? "text-sacred-emerald" : "text-secondary"
-                                }`}>
-                                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                    {isQuran ? "menu_book" : isHadith ? "auto_stories" : "gavel"}
-                                  </span>
+                    {hasSources && (
+                      <div className="lg:col-span-4 flex flex-col gap-4 w-full">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-headline-md text-headline-md text-[18px] text-divine-ivory">Sources</h3>
+                          <span className="bg-surface-container-high px-2 py-1 rounded-md text-xs font-label-md text-on-surface-variant border border-white/5">
+                            {msg.response.sources.length} Found
+                          </span>
+                        </div>
+                        
+                        <div className="flex flex-col gap-3">
+                          {msg.response.sources.map((src, sIdx) => {
+                            const isQuran = src.name.toLowerCase().includes("quran") || src.name.toLowerCase().includes("surah");
+                            const isHadith = src.name.toLowerCase().includes("bukhari") || src.name.toLowerCase().includes("muslim") || src.name.toLowerCase().includes("hadith") || src.name.toLowerCase().includes("tirmidhi") || src.name.toLowerCase().includes("majah") || src.name.toLowerCase().includes("dawud");
+                            
+                            return (
+                              <a 
+                                key={sIdx} 
+                                href={src.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`glass-card p-4 rounded-xl flex items-center justify-between border border-white/5 border-l-2 hover:bg-white/5 transition-all cursor-pointer group ${
+                                  isQuran 
+                                    ? "border-l-primary/30 hover:border-l-primary" 
+                                    : isHadith 
+                                      ? "border-l-sacred-emerald/30 hover:border-l-sacred-emerald" 
+                                      : "border-l-secondary-fixed-dim/30 hover:border-l-secondary-fixed-dim"
+                                }`}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center ${
+                                    isQuran ? "text-primary" : isHadith ? "text-sacred-emerald" : "text-secondary"
+                                  }`}>
+                                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                      {isQuran ? "menu_book" : isHadith ? "auto_stories" : "gavel"}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-headline-md text-headline-md text-[16px] text-on-surface group-hover:text-primary transition-colors">
+                                      {src.name}
+                                    </span>
+                                    <span className="font-label-md text-label-md text-[11px] text-on-surface-variant">
+                                      Click to Verify Citation
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="flex flex-col">
-                                  <span className="font-headline-md text-headline-md text-[16px] text-on-surface group-hover:text-primary transition-colors">
-                                    {src.name}
-                                  </span>
-                                  <span className="font-label-md text-label-md text-[11px] text-on-surface-variant">
-                                    Click to Verify Citation
-                                  </span>
-                                </div>
-                              </div>
-                              <span className="material-symbols-outlined text-on-surface-variant opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all transform group-hover:translate-x-1">
-                                open_in_new
-                              </span>
-                            </a>
-                          );
-                        })}
+                                <span className="material-symbols-outlined text-on-surface-variant opacity-50 group-hover:opacity-100 group-hover:text-primary transition-all transform group-hover:translate-x-1">
+                                  open_in_new
+                                </span>
+                              </a>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
