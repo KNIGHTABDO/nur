@@ -23,6 +23,11 @@ export interface NurResponse {
   hadith: NurHadith[];
   fiqh: string[];
   sources: NurSource[];
+  debugMetadata?: {
+    engineUsed: "fanar" | "groq" | "gemini";
+    rawRequest: any;
+    rawResponse: any;
+  };
 }
 
 // System instructions to enforce AI identity, constraints, anonymization and scopes
@@ -61,366 +66,251 @@ export interface ChatTurn {
   text: string;
 }
 
-export const fetchGeminiResponse = async (
+export const fetchFanarSadiqResponse = async (
   queryText: string,
   apiKey: string,
-  history: ChatTurn[] = []
+  history: ChatTurn[] = [],
+  groqKey?: string
 ): Promise<NurAgentResult> => {
-  const activeModel = "gemini-3.5-flash";
+  const endpoint = "https://api.fanar.qa/v1/chat/completions";
 
   try {
-    // Build Phase 1 contents history payload
-    const contentsPayload: any[] = [];
-    history.forEach(turn => {
-      contentsPayload.push({
-        role: turn.role,
-        parts: [{ text: turn.text }]
-      });
-    });
-    // Add current user prompt
-    contentsPayload.push({
-      role: "user",
-      parts: [
-        {
-          text: `${queryText}\n\nIMPORTANT SYSTEM ROUTING INSTRUCTION: If you decide to reply directly as a conversational greeting or meta-question without calling the search tool, write a warm and friendly plain text greeting. Do NOT output a JSON block, do NOT write code blocks, just output the plain text directly.`
-        }
-      ]
+    // 1. Process and clean conversational history context
+    const messages = history.map(turn => {
+      let contentText = turn.text;
+      
+      // If history contains raw JSON payload from previous steps, unpack its text answer
+      if (contentText.startsWith("{") && contentText.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(contentText);
+          contentText = parsed.answer || contentText;
+        } catch (e) {}
+      }
+
+      return {
+        role: turn.role === "model" ? "assistant" : "user",
+        content: contentText
+      };
     });
 
-    // ==========================================
-    // PHASE 1: INTENT & TOOL DECISION ROUTER
-    // ==========================================
-    const urlPhase1 = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
-    
-    const responsePhase1 = await fetch(urlPhase1, {
+    // Add current user prompt
+    messages.push({
+      role: "user",
+      content: queryText
+    });
+
+    const payload = {
+      model: "Fanar-Sadiq",
+      messages: messages
+    };
+
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        contents: contentsPayload,
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTIONS }]
-        },
-        tools: [
-          {
-            functionDeclarations: [
-              {
-                name: "search_islamic_sources",
-                description: "Searches authentic Islamic resources (the Holy Quran and Sunnah Hadith) for verses and authentic teachings related to a query. Use this tool ONLY when the user's query asks for religious rulings, Quran verses, Hadiths, Islamic practices, or historical jurisprudence. Do NOT call this tool for conversational queries (like 'hey', 'hello', 'what can you do', 'help', etc.), greetings, or meta-questions about who you are, your name, or your capabilities.",
-                parameters: {
-                  type: "OBJECT",
-                  properties: {
-                    query: {
-                      type: "STRING",
-                      description: "The search query. MUST be an extremely concise, single-word or two-word core keyword representing the main topic (e.g., 'music' instead of 'music instruments', 'prayer' instead of 'how to pray', 'fasting' instead of 'fasting during travel', 'charity' instead of 'giving charity to the poor'). Keep it strictly to one word if possible."
-                    },
-                    sourceType: {
-                      type: "STRING",
-                      enum: ["quran", "hadith", "both"],
-                      description: "Specify whether to search Quran, Hadith, or both based on what is relevant."
-                    }
-                  },
-                  required: ["query", "sourceType"]
-                }
-              }
-            ]
-          }
-        ]
-      })
+      body: JSON.stringify(payload)
     });
 
-    if (responsePhase1.status === 429) {
-      throw new Error("Gemini Rate Limit (429) exceeded");
+    if (response.status === 429) {
+      throw new Error("Fanar API rate limit reached (429 Too Many Requests).");
     }
 
-    if (!responsePhase1.ok) {
-      const errText = await responsePhase1.text();
-      throw new Error(`Phase 1 API error: ${responsePhase1.status} - ${errText}`);
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Fanar API error: ${response.status} - ${errText}`);
     }
 
-    const dataPhase1 = await responsePhase1.json();
-    const candidate = dataPhase1.candidates?.[0];
-    const firstPart = candidate?.content?.parts?.[0];
-    
-    // Check if the model invoked our search tool
-    if (firstPart?.functionCall && firstPart.functionCall.name === "search_islamic_sources") {
-      const args = firstPart.functionCall.args as { query: string; sourceType: string };
-      const searchQuery = args.query || queryText;
-      const sourceType = args.sourceType || "both";
+    const data = await response.json();
+    const assistantMessage = data.choices?.[0]?.message;
+    const answer = assistantMessage?.content || "";
+    const rawReferences: any[] = assistantMessage?.references || [];
 
-      let retrievedQuran: NurQuranVerse[] = [];
-      let retrievedHadith: NurHadith[] = [];
-      const sourcesUsed: string[] = [];
+    const quranVerses: NurQuranVerse[] = [];
+    const hadiths: NurHadith[] = [];
+    const sources: NurSource[] = [];
 
-      // ----------------------------------------
-      // Execute Quran Search
-      // ----------------------------------------
-      if (sourceType === "quran" || sourceType === "both") {
-        try {
-          const quranRes = await fetch(
-            `https://api.alquran.cloud/v1/search/${encodeURIComponent(searchQuery)}/all/en`
-          );
-          if (quranRes.ok) {
-            const quranData = await quranRes.json();
-            if (quranData.data?.matches && quranData.data.matches.length > 0) {
-              // Take top 3 matching verses
-              const matches = quranData.data.matches.slice(0, 3);
-              const versesWithArabic = await Promise.all(
-                matches.map(async (match: any) => {
-                  try {
-                    // Fetch Arabic text with diacritics
-                    const arRes = await fetch(
-                      `https://api.alquran.cloud/v1/ayah/${match.number}/quran-simple`
-                    );
-                    const arData = await arRes.json();
-                    return {
-                      arabic: arData.data?.text || "",
-                      english: match.text || "",
-                      reference: `Surah ${match.surah?.englishName || "Quran"} (${match.surah?.number}:${match.numberInSurah})`,
-                      url: `https://quran.com/${match.surah?.number || 1}/${match.numberInSurah || 1}`
-                    };
-                  } catch (e) {
-                    console.error("Failed to fetch Arabic verse details", e);
-                    return {
-                      arabic: "",
-                      english: match.text || "",
-                      reference: `Surah ${match.surah?.englishName || "Quran"} (${match.surah?.number}:${match.numberInSurah})`,
-                      url: `https://quran.com/${match.surah?.number || 1}/${match.numberInSurah || 1}`
-                    };
-                  }
-                })
-              );
-              retrievedQuran = versesWithArabic;
-              sourcesUsed.push("Al Quran Cloud API");
-            }
-          }
-        } catch (e) {
-          console.error("Quran Search Fetch failed", e);
+    // Parse and map Fanar's native references to existing Nur response structure (default fallback mapping)
+    rawReferences.forEach((ref) => {
+      const sourceLower = (ref.source || "").toLowerCase();
+      const contentLower = (ref.content || "").toLowerCase();
+
+      const isQuran = sourceLower.includes("quran") || 
+                      sourceLower.includes("surah") || 
+                      sourceLower.includes("ayah") ||
+                      contentLower.includes("allah says") ||
+                      contentLower.includes("says in the quran");
+
+      const isHadith = sourceLower.includes("hadith") || 
+                        sourceLower.includes("bukhari") || 
+                        sourceLower.includes("muslim") || 
+                        sourceLower.includes("tirmidhi") || 
+                        sourceLower.includes("abu dawud") || 
+                        sourceLower.includes("ibn majah") || 
+                        sourceLower.includes("an-nasa'i") ||
+                        sourceLower.includes("prophet");
+
+      let refUrl = "https://api.fanar.qa";
+      if (isQuran) {
+        refUrl = "https://quran.com";
+        const match = sourceLower.match(/(\d+):(\d+)/);
+        if (match) {
+          refUrl = `https://quran.com/${match[1]}/${match[2]}`;
         }
+      } else if (isHadith) {
+        refUrl = "https://sunnah.com";
+        if (sourceLower.includes("bukhari")) refUrl = "https://sunnah.com/bukhari";
+        else if (sourceLower.includes("muslim")) refUrl = "https://sunnah.com/muslim";
+        else if (sourceLower.includes("tirmidhi")) refUrl = "https://sunnah.com/tirmidhi";
+        else if (sourceLower.includes("abu dawud") || sourceLower.includes("abudawud")) refUrl = "https://sunnah.com/abudawud";
+        else if (sourceLower.includes("ibn majah") || sourceLower.includes("ibnmajah")) refUrl = "https://sunnah.com/ibnmajah";
+        else if (sourceLower.includes("an-nasa'i") || sourceLower.includes("nasai")) refUrl = "https://sunnah.com/nasai";
+      } else if (sourceLower.startsWith("http://") || sourceLower.startsWith("https://")) {
+        refUrl = ref.source;
       }
 
-      // ----------------------------------------
-      // Execute Hadith Search
-      // ----------------------------------------
-      if (sourceType === "hadith" || sourceType === "both") {
-        try {
-          const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-          const queryUrl = isLocal
-            ? `/hadith-proxy/api/search?q=${encodeURIComponent(searchQuery)}&limit=3`
-            : `https://hadithapi.pages.dev/api/search?q=${encodeURIComponent(searchQuery)}&limit=3`;
-
-          const hadithRes = await fetch(queryUrl);
-
-          if (hadithRes.ok) {
-            const hadithData = await hadithRes.json();
-            if (hadithData.results && hadithData.results.length > 0) {
-              retrievedHadith = hadithData.results.map((item: any) => {
-                const bookTitle = item.book || "Authentic Collection";
-                const colSlug = item.collection || "";
-                let standardCollName = bookTitle;
-                if (colSlug === "bukhari") standardCollName = "Sahih al-Bukhari";
-                else if (colSlug === "muslim") standardCollName = "Sahih Muslim";
-                else if (colSlug === "abudawud") standardCollName = "Sunan Abu Dawud";
-                else if (colSlug === "ibnmajah") standardCollName = "Sunan Ibn Majah";
-                else if (colSlug === "tirmidhi") standardCollName = "Jami` at-Tirmidhi";
-
-                return {
-                  arabic: item.hadith_arabic || "",
-                  english: (item.header ? `${item.header}\n` : "") + (item.hadith_english || ""),
-                  reference: `${standardCollName} (Hadith #${item.id || item.refno || ""})`,
-                  url: `https://hadithapi.pages.dev/api/${item.collection || "bukhari"}/${item.id || 1}`
-                };
-              });
-              sourcesUsed.push("Hadith API (pages.dev)");
-            }
-          }
-        } catch (e) {
-          console.error("Hadith Search Fetch failed", e);
-        }
+      if (isQuran) {
+        quranVerses.push({
+          arabic: "", 
+          english: ref.content || "",
+          reference: ref.source || "Holy Quran",
+          url: refUrl
+        });
+      } else if (isHadith) {
+        hadiths.push({
+          english: ref.content || "",
+          reference: ref.source || "Hadith Reference",
+          url: refUrl
+        });
       }
 
-      // Ensure sourcesUsed has at least one catalog entry if blank
-      if (sourcesUsed.length === 0) {
-        sourcesUsed.push("Islamic Canonical Databases");
-      }
+      sources.push({
+        name: ref.source || `Reference #${ref.number || ref.index}`,
+        url: refUrl
+      });
+    });
 
-      // ==========================================
-      // PHASE 2: SYNTHESIZER WITH RETRIEVED TEXTS
-      // ==========================================
-      const synthesisPrompt = `
-Original User Inquiry: "${queryText}"
-Decided Search Query: "${searchQuery}"
+    // ----------------------------------------------------
+    // HYBRID RESTRENGTHENING SYNTHESIS VIA GROQ (IF KEY ACTIVE)
+    // ----------------------------------------------------
+    if (groqKey) {
+      try {
+        const groqPrompt = `
+You are a zero-creativity JSON restructuring parser for authentic Islamic knowledge.
+Your sole task is to take the raw response content and verified references retrieved from a sovereign Islamic database (Fanar API), and format them strictly into the requested JSON schema.
 
-Retrieved Database Context:
-Quranic Verses:
-${JSON.stringify(retrievedQuran, null, 2)}
+CRITICAL INSTRUCTIONS:
+1. You must be 0% creative. Do NOT add any external knowledge, rulings, or text. Rely ONLY on the provided Fanar response content and Fanar references.
+2. Clean up the "answer" field: remove redundant copy-pasted references or lists from the bottom of the main text. Keep the core text response perfectly polished, readable, and beautifully formatted in markdown.
+3. Correctly classify and populate the "quran" array: extract any Quranic verses cited in the Fanar response or references. For each verse, extract the Arabic diacritical script (tashkeel) if available, and the English translation.
+4. Correctly classify and populate the "hadith" array: extract any Hadith narrations cited in the Fanar response or references. Include Arabic if available, and English.
+5. Formulate clear, concise jurisprudential "fiqh" summary bullet points based strictly on the rulings stated in the Fanar text.
+6. Populate the "sources" list with verified canonical sources matching the references. Provide a name and a clean URL.
 
-Authentic Hadiths:
-${JSON.stringify(retrievedHadith, null, 2)}
+JSON Response Schema (MUST MATCH EXACTLY):
+{
+  "answer": "Clean, beautifully formatted, concise text response in English.",
+  "quran": [
+    {
+      "arabic": "Arabic text with tashkeel (if cited in the Fanar text/references)",
+      "english": "English translation of the verse",
+      "reference": "e.g., Surah Al-Baqarah (2:185)",
+      "url": "https://quran.com/2/185"
+    }
+  ],
+  "hadith": [
+    {
+      "arabic": "Arabic text (if cited)",
+      "english": "English translation",
+      "reference": "e.g., Sahih al-Bukhari (Hadith #1)",
+      "url": "https://sunnah.com/bukhari/1"
+    }
+  ],
+  "fiqh": [
+    "Specific legal verdict bullet 1",
+    "Specific legal verdict bullet 2"
+  ],
+  "sources": [
+    {
+      "name": "Reference source name",
+      "url": "Reference source URL"
+    }
+  ]
+}
 
-Please synthesize a complete, beautiful, and authentic response to the user's inquiry strictly utilizing the retrieved texts where applicable.
-Ensure you follow all the rules of the "Nur" persona:
-1. Identify strictly as "Nur". No Google, Gemini, or version terms.
-2. Ground the response in the retrieved Quranic verses and Hadiths. Cite the reference strings exactly as retrieved.
-3. Formulate legal/jurisprudential bullets (fiqh) and general sources list.
-4. If the retrieved texts do not directly solve the query, state so humbly and provide the closest authentic guidance without speculating.
-5. Format your output strictly matching the requested JSON schema.
+Input Context to Restructure:
+=== Raw Fanar Response ===
+${answer}
+
+=== Raw Fanar References ===
+${JSON.stringify(rawReferences, null, 2)}
 `;
 
-      const contentsPhase2: any[] = [];
-      history.forEach(turn => {
-        contentsPhase2.push({
-          role: turn.role,
-          parts: [{ text: turn.text }]
-        });
-      });
-      contentsPhase2.push({
-        role: "user",
-        parts: [{ text: synthesisPrompt }]
-      });
-
-      const responsePhase2 = await fetch(urlPhase1, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: contentsPhase2,
-          systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTIONS }]
+        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${groqKey}`
           },
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                answer: { 
-                  type: "STRING", 
-                  description: "Detailed, comprehensive answer in English, matching a humble and authoritative tone." 
-                },
-                quran: {
-                  type: "ARRAY",
-                  description: "Quranic verses cited. MUST match the retrieved Quranic verses.",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      arabic: { type: "STRING" },
-                      english: { type: "STRING" },
-                      reference: { type: "STRING" }
-                    },
-                    required: ["arabic", "english", "reference"]
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [
+              { role: "system", content: "You are a zero-creativity JSON parser that strictly structures provided text without adding any external information." },
+              { role: "user", content: groqPrompt }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (groqResponse.ok) {
+          const groqData = await groqResponse.json();
+          const parsed = JSON.parse(groqData.choices?.[0]?.message?.content || "{}");
+          
+          if (parsed.answer && Array.isArray(parsed.quran) && Array.isArray(parsed.hadith) && Array.isArray(parsed.sources)) {
+            return {
+              response: {
+                answer: parsed.answer,
+                quran: parsed.quran,
+                hadith: parsed.hadith,
+                fiqh: Array.isArray(parsed.fiqh) ? parsed.fiqh : ["Synthesized using authentic Fanar RAG digital library references."],
+                sources: parsed.sources.length > 0 ? parsed.sources : sources,
+                debugMetadata: {
+                  engineUsed: "fanar",
+                  rawRequest: payload,
+                  rawResponse: {
+                    fanarResponse: data,
+                    groqRestructured: parsed
                   }
-                },
-                hadith: {
-                  type: "ARRAY",
-                  description: "Hadiths cited. MUST match the retrieved Hadiths.",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      arabic: { type: "STRING" },
-                      english: { type: "STRING" },
-                      reference: { type: "STRING" }
-                    },
-                    required: ["english", "reference"]
-                  }
-                },
-                fiqh: {
-                  type: "ARRAY",
-                  description: "Short bullets describing schools of thought, scholarly consensus, or legal verdicts.",
-                  items: { type: "STRING" }
-                },
-                sources: {
-                  type: "ARRAY",
-                  description: "List of general sources referenced.",
-                  items: { type: "STRING" }
                 }
               },
-              required: ["answer", "quran", "hadith", "fiqh", "sources"]
-            }
-          }
-        })
-      });
-
-      if (responsePhase2.status === 429) {
-        throw new Error("Gemini Rate Limit (429) exceeded on synthesis Phase 2");
-      }
-
-      if (!responsePhase2.ok) {
-        const errText = await responsePhase2.text();
-        throw new Error(`Phase 2 API error: ${responsePhase2.status} - ${errText}`);
-      }
-
-      const dataPhase2 = await responsePhase2.json();
-      const textResponse = dataPhase2.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textResponse) {
-        throw new Error("Empty content returned from Generative AI synthesizer.");
-      }
-
-      const parsedResponse: NurResponse = JSON.parse(textResponse);
-      
-      // Re-construct the sources list using the actual CDN/canonical URLs of the retrieved items
-      const finalSources: NurSource[] = [];
-      retrievedQuran.forEach(verse => {
-        finalSources.push({
-          name: verse.reference,
-          url: verse.url || "https://quran.com"
-        });
-      });
-      retrievedHadith.forEach(hadith => {
-        finalSources.push({
-          name: hadith.reference,
-          url: hadith.url || "https://hadithapi.pages.dev"
-        });
-      });
-
-      if (finalSources.length === 0) {
-        finalSources.push({
-          name: "Islamic Canonical Databases",
-          url: "https://hadithapi.pages.dev"
-        });
-      }
-
-      parsedResponse.sources = finalSources;
-
-      return {
-        response: parsedResponse,
-        toolCalled: true
-      };
-    } else {
-      // ----------------------------------------
-      // Conversational Route (No Tool Decided)
-      // ----------------------------------------
-      let chatText = firstPart?.text || "As-salāmu 'alaykum. How can I assist you on your spiritual path of Islamic study today?";
-      
-      // Robust JSON unpacking check: in case Gemini outputs custom JSON wrapper for the greeting
-      const trimmed = chatText.trim();
-      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          chatText = parsed.answer || parsed.response || parsed.text || chatText;
-        } catch (e) {
-          // Attempt simple key/value capture if parse fails
-          const match = trimmed.match(/"(?:response|answer|text)"\s*:\s*"([^"]+)"/);
-          if (match && match[1]) {
-            chatText = match[1];
+              toolCalled: true
+            };
           }
         }
+      } catch (groqErr) {
+        console.warn("[Nur Router] Groq restructuring failed, falling back to client-side mapping:", groqErr);
       }
-
-      return {
-        response: {
-          answer: chatText,
-          quran: [],
-          hadith: [],
-          fiqh: [],
-          sources: []
-        },
-        toolCalled: false
-      };
     }
+
+    // Default Fallback Response
+    return {
+      response: {
+        answer: answer,
+        quran: quranVerses,
+        hadith: hadiths,
+        fiqh: ["Synthesized dynamically using authentic Fanar RAG digital library references."],
+        sources: sources.length > 0 ? sources : [{ name: "Fanar Islamic RAG Catalog", url: "https://api.fanar.qa" }],
+        debugMetadata: {
+          engineUsed: "fanar",
+          rawRequest: payload,
+          rawResponse: data
+        }
+      },
+      toolCalled: true
+    };
   } catch (error) {
-    console.error("Error invoking Gemini API Agent:", error);
+    console.error("fetchFanarSadiqResponse failed:", error);
     throw error;
   }
 };
@@ -709,6 +599,16 @@ Ensure you follow all the rules of the "Nur" persona:
       }
 
       parsedResponse.sources = finalSources;
+      
+      parsedResponse.debugMetadata = {
+        engineUsed: "groq",
+        rawRequest: { 
+          optimizedSearchQuery: searchQuery,
+          messages, 
+          model: "llama-3.3-70b-versatile" 
+        },
+        rawResponse: data
+      };
 
       return {
         response: parsedResponse,
@@ -734,11 +634,11 @@ const getMockDefaultResponse = (queryText: string): Promise<NurAgentResult> => {
       if (isGreeting) {
         resolve({
           response: {
-            answer: "As-salāmu 'alaykum! I am Nur, your AI companion for Islamic knowledge. Please configure your Groq or Gemini API Key in the Settings page to unlock real-time, authentic Islamic search and synthesis.",
+            answer: "As-salāmu 'alaykum! I am Nur, your AI companion for Islamic knowledge. Please configure your Groq or Fanar API Key in the Settings page to unlock real-time, authentic Islamic search and synthesis.",
             quran: [],
             hadith: [],
             fiqh: ["An API Key is required in Settings to enable real-time searches."],
-            sources: [{ name: "Nur System Helper", url: "https://api.groq.com" }]
+            sources: []
           },
           toolCalled: false
         });
@@ -768,116 +668,142 @@ const getMockDefaultResponse = (queryText: string): Promise<NurAgentResult> => {
 // Global Routing AI Director
 export const fetchNurResponse = async (
   queryText: string,
-  apiKey: string,
+  _apiKey: string, // Kept for signature compatibility
   history: ChatTurn[] = []
 ): Promise<NurAgentResult> => {
-  // 1. Resolve keys from server environment (.env via VITE_) or client LocalStorage
-  const geminiKey = import.meta.env.VITE_GEMINI_API_KEY || apiKey || localStorage.getItem("nur_gemini_api_key") || "";
   const groqKey = import.meta.env.VITE_GROQ_API_KEY || localStorage.getItem("nur_groq_api_key") || "";
-  
-  // 2. Resolve default engine (defaults to "groq" as requested by the user)
-  const defaultEngine = localStorage.getItem("nur_default_engine") || "groq";
+  const fanarKey = import.meta.env.VITE_FANAR_API_KEY || localStorage.getItem("nur_fanar_api_key") || "";
 
-  console.log(`[Nur Router] defaultEngine: ${defaultEngine}, geminiKeyConfigured: ${!!geminiKey}, groqKeyConfigured: ${!!groqKey}`);
+  console.log(`[Nur Router] groqKeyConfigured: ${!!groqKey}, fanarKeyConfigured: ${!!fanarKey}`);
 
-  // Executor helpers
-  const runGroq = async (): Promise<NurAgentResult> => {
-    if (!groqKey) throw new Error("Groq API Key is not configured.");
-    return fetchGroqFallback(queryText, groqKey, history);
-  };
+  // Scenario 1: Neither key is configured
+  if (!groqKey && !fanarKey) {
+    console.log("[Nur Router] No credentials configured. Returning default mock response...");
+    return getMockDefaultResponse(queryText);
+  }
 
-  const runGemini = async (): Promise<NurAgentResult> => {
-    if (!geminiKey) throw new Error("Gemini API Key is not configured.");
-    return fetchGeminiResponse(queryText, geminiKey, history);
-  };
-
-  // 3. Dual-Failover Routing Logic
-  if (defaultEngine === "groq") {
-    if (groqKey) {
+  // Scenario 2: Groq is configured (enabling intelligent routing)
+  if (groqKey) {
+    if (fanarKey) {
+      // Both Groq and Fanar configured (unified smart routing pipeline)
       try {
-        return await runGroq();
-      } catch (err) {
-        console.warn("[Nur Router] Groq failed/rate-limited. Attempting failover to Gemini...", err);
-        if (geminiKey) {
-          try {
-            return await runGemini();
-          } catch (geminiErr) {
-            console.error("[Nur Router] Failover to Gemini also failed:", geminiErr);
-          }
+        const messages = [
+          {
+            role: "system" as const,
+            content: `
+You are the routing director for Nur, an enlightened Islamic AI companion.
+Analyze the user's inquiry and the conversation history to decide if answering it requires querying our sovereign Islamic search database (Fanar API) for specific Quranic verses, Hadith narrations, or formal jurisprudential rulings, or if it is a conversational turn that you can answer directly.
+
+CRITICAL INTENT CLASSIFICATION RULES:
+1. Set "shouldSearchFanar" to true ONLY if the query asks for:
+   - Islamic jurisprudential rulings/verdicts (Fiqh on marriage, Zakat, inheritance, purity, banking, etc.).
+   - Specific citations/lookups of Quranic verses or Hadith narrations.
+   - Deep theological positions, historical Islamic facts, or scholarly consensus.
+2. Set "shouldSearchFanar" to false for:
+   - Greetings (e.g., "Assalamu alaykum", "Hello", "Hey", "Good morning").
+   - Follow-up conversational pleasantries, simple dialogue, thanks, or praise (e.g., "JazakAllah khair", "Thank you", "BarakAllahu feek", "Understood", "Okay").
+   - Questions about your identity, capabilities, creators, or purpose (e.g., "Who are you?", "What is your name?", "What can you do?").
+   - Any secular, general, or unrelated questions (e.g., coding, mathematics, science, non-Islamic news, creative writing).
+
+CRITICAL CONVERSATIONAL ANSWER RULES (Only when "shouldSearchFanar" is false):
+1. Write the final response in the "conversationalAnswer" field.
+2. You are Nur, and only Nur. Never mention Google, Gemini, Groq, or specific model versions. If asked about your creators or technology, politely say: "I am Nur, your AI companion for Islamic knowledge."
+3. Keep the response beautifully written, concise, respectful, and perfectly aligned with the authentic Islamic identity of Nur.
+4. If the query is secular/unrelated/out of scope, you MUST politely decline to answer using the exact message:
+   "As-salāmu 'alaykum. My purpose is strictly to assist with Islamic knowledge, Quran studies, Hadith, and moral jurisprudence. I kindly ask that we keep our dialogues centered on these topics."
+
+Respond STRICTLY in JSON format matching this schema:
+{
+  "shouldSearchFanar": true | false,
+  "conversationalAnswer": "Response text if shouldSearchFanar is false, otherwise empty string."
+}
+`
+          },
+          ...history.map(turn => {
+            let contentText = turn.text;
+            if (contentText.startsWith("{") && contentText.endsWith("}")) {
+              try {
+                const parsed = JSON.parse(contentText);
+                contentText = parsed.answer || contentText;
+              } catch (e) {}
+            }
+            return {
+              role: turn.role === "model" ? "assistant" as const : "user" as const,
+              content: contentText
+            };
+          }),
+          { role: "user" as const, content: queryText }
+        ];
+
+        const routerResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${groqKey}`
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages,
+            response_format: { type: "json_object" }
+          })
+        });
+
+        if (!routerResponse.ok) {
+          throw new Error(`Groq Router request failed: ${routerResponse.status}`);
         }
-        return {
-          response: {
-            answer: `As-salāmu 'alaykum. The primary Groq engine encountered an issue, and the secondary Gemini fallback was unsuccessful. Details: ${(err as Error).message}`,
-            quran: [],
-            hadith: [],
-            fiqh: ["Primary Groq engine query failed.", "Gemini fallback not configured or also failed."],
-            sources: [{ name: "Nur AI Systems", url: "https://api.groq.com" }]
-          },
-          toolCalled: false
-        };
-      }
-    } else if (geminiKey) {
-      console.log("[Nur Router] Groq key missing. Querying Gemini directly...");
-      try {
-        return await runGemini();
-      } catch (err) {
-        return {
-          response: {
-            answer: `As-salāmu 'alaykum. The Groq key is not configured, and the Gemini query failed: ${(err as Error).message}`,
-            quran: [],
-            hadith: [],
-            fiqh: ["Gemini query failed."],
-            sources: [{ name: "Error Handler", url: "https://generativelanguage.googleapis.com" }]
-          },
-          toolCalled: false
-        };
+
+        const routerData = await routerResponse.json();
+        const rawContent = routerData.choices?.[0]?.message?.content || "{}";
+        const parsed = JSON.parse(rawContent);
+
+        console.log(`[Nur Smart Router] shouldSearchFanar: ${parsed.shouldSearchFanar}`);
+
+        if (parsed.shouldSearchFanar) {
+          // Intent B: RAG Search required
+          try {
+            return await fetchFanarSadiqResponse(queryText, fanarKey, history, groqKey);
+          } catch (fanarErr) {
+            console.warn("[Nur Router] Fanar RAG failed. Using high-speed Groq fallback RAG...", fanarErr);
+            return await fetchGroqFallback(queryText, groqKey, history);
+          }
+        } else {
+          // Intent A: Conversational turn handled directly by Groq
+          return {
+            response: {
+              answer: parsed.conversationalAnswer || "As-salāmu 'alaykum. I am Nur, your AI companion. How may I assist you in your pursuit of Islamic knowledge today?",
+              quran: [],
+              hadith: [],
+              fiqh: [],
+              sources: [],
+              debugMetadata: {
+                engineUsed: "groq",
+                rawRequest: {
+                  messages,
+                  model: "llama-3.3-70b-versatile"
+                },
+                rawResponse: routerData
+              }
+            },
+            toolCalled: false
+          };
+        }
+      } catch (routerErr) {
+        console.warn("[Nur Router] Groq routing classification failed. Falling back to default RAG paths...", routerErr);
+        // Fallback to calling Fanar directly, failing over to Groq RAG
+        try {
+          return await fetchFanarSadiqResponse(queryText, fanarKey, history, groqKey);
+        } catch (fanarErr) {
+          return await fetchGroqFallback(queryText, groqKey, history);
+        }
       }
     } else {
-      return getMockDefaultResponse(queryText);
-    }
-  } else {
-    // defaultEngine === "gemini"
-    if (geminiKey) {
-      try {
-        return await runGemini();
-      } catch (err) {
-        console.warn("[Nur Router] Gemini failed/rate-limited. Attempting failover to Groq...", err);
-        if (groqKey) {
-          try {
-            return await runGroq();
-          } catch (groqErr) {
-            console.error("[Nur Router] Failover to Groq also failed:", groqErr);
-          }
-        }
-        return {
-          response: {
-            answer: `As-salāmu 'alaykum. The primary Gemini engine encountered an issue, and the secondary Groq fallback was unsuccessful. Details: ${(err as Error).message}`,
-            quran: [],
-            hadith: [],
-            fiqh: ["Primary Gemini engine query failed.", "Groq fallback not configured or also failed."],
-            sources: [{ name: "Nur AI Systems", url: "https://api.groq.com" }]
-          },
-          toolCalled: false
-        };
-      }
-    } else if (groqKey) {
-      console.log("[Nur Router] Gemini key missing. Querying Groq directly...");
-      try {
-        return await runGroq();
-      } catch (err) {
-        return {
-          response: {
-            answer: `As-salāmu 'alaykum. The Gemini key is not configured, and the Groq query failed: ${(err as Error).message}`,
-            quran: [],
-            hadith: [],
-            fiqh: ["Groq query failed."],
-            sources: [{ name: "Error Handler", url: "https://api.groq.com" }]
-          },
-          toolCalled: false
-        };
-      }
-    } else {
-      return getMockDefaultResponse(queryText);
+      // Groq configured but no Fanar key -> Fallback RAG via Groq
+      console.log("[Nur Router] Only Groq key is configured. Querying Groq Fallback RAG directly...");
+      return fetchGroqFallback(queryText, groqKey, history);
     }
   }
+
+  // Scenario 3: Only Fanar is configured (no Groq for routing)
+  console.log("[Nur Router] Only Fanar key is configured. Querying Fanar directly...");
+  return fetchFanarSadiqResponse(queryText, fanarKey, history);
 };

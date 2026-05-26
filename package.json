@@ -1,7 +1,8 @@
 {
-  "name": "temp-vite-app",
-  "private": true,
-  "version": "0.0.0",
+  "name": "nur-islamic-companion",
+  "version": "1.0.0",
+  "description": "Unified Groq + Fanar Sovereign Islamic AI Companion with high-fidelity RAG and cognitive routing.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

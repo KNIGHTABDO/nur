@@ -218,25 +218,60 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({ onSelectQuery }) =
 export const SourcesView: React.FC = () => {
   const libraryShelves = [
     {
-      category: "Quranic Sciences",
+      category: "Sovereign Islamic RAG Catalogs (Direct Integration)",
       items: [
-        { title: "Tafsir ibn Kathir", author: "Imam Ibn Kathir", volumes: "10 Volumes", status: "Verified & Fully Scanned" },
-        { title: "Tafsir al-Jalalayn", author: "Jalal al-Din al-Mahalli & al-Suyuti", volumes: "1 Volume", status: "Verified & Fully Scanned" }
+        { 
+          title: "Fanar-Sadiq Sovereign Database", 
+          author: "Qatar Computing Research Institute (QCRI)", 
+          volumes: "Classical Fiqh, Hadith & Tafsir Corpora", 
+          status: "Active & Primary RAG Target",
+          icon: "database"
+        },
+        { 
+          title: "Tafsir Ibn Kathir & al-Jalalayn", 
+          author: "Fanar Integrated Libraries", 
+          volumes: "Full Jurisprudence Exegesis Indexes", 
+          status: "Verified & Fully Synced",
+          icon: "menu_book"
+        }
       ]
     },
     {
-      category: "Hadith Collections",
+      category: "Dynamic Fallback Databases (Resilient Failover Core)",
       items: [
-        { title: "Sahih al-Bukhari", author: "Imam al-Bukhari", volumes: "7,563 Hadiths", status: "Verified (Authentic Grade Only)" },
-        { title: "Sahih Muslim", author: "Imam Muslim", volumes: "3,033 Hadiths", status: "Verified (Authentic Grade Only)" },
-        { title: "Sunan an-Nasa'i", author: "Imam an-Nasa'i", volumes: "5,758 Hadiths", status: "Index Synced" }
+        { 
+          title: "Alquran.cloud Ingress API", 
+          author: "Global Islamic Research Ingress", 
+          volumes: "Verified Arabic Diacritics (Tashkeel) Ingestion", 
+          status: "Active Web Fallback",
+          icon: "cloud_sync"
+        },
+        { 
+          title: "HadithAPI Global Catalog", 
+          author: "Canonical Collections Index", 
+          volumes: "Sahih al-Bukhari, Sahih Muslim, at-Tirmidhi, and Sunan Collections", 
+          status: "Active Web Fallback",
+          icon: "auto_stories"
+        }
       ]
     },
     {
-      category: "Classical Jurisprudence (Fiqh)",
+      category: "Cognitive Routing & Restructuring Engines",
       items: [
-        { title: "Al-Mughni", author: "Ibn Qudamah (Hanbali)", volumes: "14 Volumes", status: "Verified Reference" },
-        { title: "Al-Majmu'", author: "Imam an-Nawawi (Shafi'i)", volumes: "23 Volumes", status: "Verified Reference" }
+        { 
+          title: "Groq Cognitive Router & Supervisor", 
+          author: "llama-3.3-70b-versatile Engine", 
+          volumes: "Intelligent Intent Classification & Limit Preservation", 
+          status: "Active Gatekeeper",
+          icon: "terminal"
+        },
+        { 
+          title: "Zero-Creativity Synthesis Restructurer", 
+          author: "Groq Restructure Parser Core", 
+          volumes: "Strict schema formatting with 0% creativity guardrails", 
+          status: "Active Gatekeeper",
+          icon: "shield"
+        }
       ]
     }
   ];
@@ -259,7 +294,7 @@ export const SourcesView: React.FC = () => {
               {shelf.items.map((book, bIdx) => (
                 <div key={bIdx} className="glass-card p-5 rounded-xl border border-white/5 flex gap-4 hover:bg-white/5 transition-all">
                   <div className="w-12 h-14 bg-primary/10 border border-primary/20 rounded flex items-center justify-center flex-shrink-0 text-primary">
-                    <span className="material-symbols-outlined text-2xl">book_2</span>
+                    <span className="material-symbols-outlined text-2xl">{book.icon}</span>
                   </div>
                   <div className="flex flex-col gap-1 flex-1">
                     <h4 className="font-label-md text-label-md text-divine-ivory font-semibold">{book.title}</h4>
@@ -370,26 +405,23 @@ export const ProfileView: React.FC = () => {
 // 5. SETTINGS VIEW
 // ==========================================
 export const SettingsView: React.FC = () => {
-  const [apiKey, setApiKey] = useState("");
   const [groqApiKey, setGroqApiKey] = useState("");
-  const [defaultEngine, setDefaultEngine] = useState("groq");
+  const [fanarApiKey, setFanarApiKey] = useState("");
   const [calendar, setCalendar] = useState("Umm al-Qura Calendar, Saudi Arabia");
   const [showNotification, setShowNotification] = useState(false);
 
-  const isGeminiEnvActive = !!import.meta.env.VITE_GEMINI_API_KEY;
   const isGroqEnvActive = !!import.meta.env.VITE_GROQ_API_KEY;
+  const isFanarEnvActive = !!import.meta.env.VITE_FANAR_API_KEY;
 
   useEffect(() => {
-    setApiKey(localStorage.getItem(KEYS.API_KEY) || "");
     setGroqApiKey(localStorage.getItem("nur_groq_api_key") || "");
-    setDefaultEngine(localStorage.getItem("nur_default_engine") || "groq");
+    setFanarApiKey(localStorage.getItem("nur_fanar_api_key") || "");
     setCalendar(localStorage.getItem(KEYS.CALENDAR) || "Umm al-Qura Calendar, Saudi Arabia");
-  }, []);
+  }, [isFanarEnvActive]);
 
   const handleSave = () => {
-    localStorage.setItem(KEYS.API_KEY, apiKey);
     localStorage.setItem("nur_groq_api_key", groqApiKey);
-    localStorage.setItem("nur_default_engine", defaultEngine);
+    localStorage.setItem("nur_fanar_api_key", fanarApiKey);
     localStorage.setItem(KEYS.CALENDAR, calendar);
     setShowNotification(true);
     setTimeout(() => setShowNotification(false), 3000);
@@ -414,8 +446,8 @@ export const SettingsView: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <label className="font-label-md text-label-md text-divine-ivory font-medium">Gemini Developer API Key</label>
-                {isGeminiEnvActive && (
+                <label className="font-label-md text-label-md text-divine-ivory font-medium">Fanar Specialized Arabic & Islamic API Key</label>
+                {isFanarEnvActive && (
                   <span className="bg-sacred-emerald/20 border border-sacred-emerald/30 text-sacred-emerald text-[10px] uppercase tracking-wider font-semibold rounded-full px-2 py-0.5">
                     ✓ Server Env Active
                   </span>
@@ -424,10 +456,10 @@ export const SettingsView: React.FC = () => {
               <input 
                 type="password"
                 className="bg-midnight-glass border border-white/10 rounded-xl px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary/50 mt-1 w-full disabled:opacity-60 disabled:cursor-not-allowed"
-                placeholder={isGeminiEnvActive ? "Configured in server environment (.env)..." : "Paste your Gemini API key here..."}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                disabled={isGeminiEnvActive}
+                placeholder={isFanarEnvActive ? "Configured in server environment (.env)..." : "Paste your Fanar API key here..."}
+                value={fanarApiKey}
+                onChange={(e) => setFanarApiKey(e.target.value)}
+                disabled={isFanarEnvActive}
               />
             </div>
             
@@ -450,27 +482,6 @@ export const SettingsView: React.FC = () => {
               />
               <p className="text-[11px] text-on-surface-variant/70 mt-1">Credentials can be supplied in browser local storage, or statically loaded via Vercel/server `.env` environment variables.</p>
             </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 relative z-10">
-          <h3 className="font-headline-md text-headline-md text-primary text-[20px] font-semibold mb-2">
-            AI Sanctuary Engine
-          </h3>
-
-          <div className="flex flex-col gap-2">
-            <label className="font-label-md text-label-md text-divine-ivory font-medium">Default Primary Engine</label>
-            <select 
-              className="bg-midnight-glass border border-white/10 rounded-xl px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary/50 mt-1 w-full"
-              value={defaultEngine}
-              onChange={(e) => setDefaultEngine(e.target.value)}
-            >
-              <option value="groq">Groq (Primary Failover Sanctuary)</option>
-              <option value="gemini">Gemini (Secondary Failover Sanctuary)</option>
-            </select>
-            <p className="text-[11px] text-on-surface-variant/70 mt-1">
-              Select which AI engine is queried first. Out-of-the-box, Nur defaults to Groq. If your selected default engine experiences rate limits (429) or has missing keys, Nur seamlessly calls the alternative failover engine instantly.
-            </p>
           </div>
         </div>
 

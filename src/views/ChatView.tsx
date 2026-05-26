@@ -24,6 +24,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
+  const [selectedDebugMessage, setSelectedDebugMessage] = useState<ChatMessage | null>(null);
 
   // Derive latest query/response for copy, bookmark, and global triggers
   const latestMessage = chatSession[chatSession.length - 1];
@@ -217,6 +218,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                               {copiedIndex === 999 ? "check" : "share"}
                             </span>
                           </button>
+                          {msg.response.debugMetadata && (
+                            <button 
+                              onClick={() => setSelectedDebugMessage(msg)}
+                              className="text-on-surface-variant hover:text-primary transition-colors flex items-center" 
+                              title="Inspect API Request/Response Debug Payload"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                bug_report
+                              </span>
+                            </button>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-sacred-emerald shadow-[0_0_6px_#004D40]"></span>
@@ -330,6 +342,77 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </form>
         </div>
       </div>
+
+      {/* Debug Metadata Inspector Modal */}
+      {selectedDebugMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md transition-all">
+          <div className="w-full max-w-4xl max-h-[85vh] flex flex-col glass-card border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative bg-midnight-glass">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-midnight-glass/50">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-2xl">terminal</span>
+                <h3 className="font-headline-md text-headline-md text-divine-ivory font-bold">
+                  AI Request & Response Inspector
+                </h3>
+              </div>
+              <button 
+                onClick={() => setSelectedDebugMessage(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-on-surface-variant hover:text-divine-ivory hover:bg-white/10 transition-all"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+
+            {/* Modal Content (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 text-left">
+              {/* Engine Pill */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold font-label-md">Engine Invoked:</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                  selectedDebugMessage.response.debugMetadata?.engineUsed === "fanar"
+                    ? "bg-primary/10 border-primary/20 text-primary"
+                    : selectedDebugMessage.response.debugMetadata?.engineUsed === "groq"
+                      ? "bg-sacred-emerald/10 border-sacred-emerald/20 text-sacred-emerald"
+                      : "bg-secondary-container/10 border-secondary-container/20 text-secondary"
+                }`}>
+                  {selectedDebugMessage.response.debugMetadata?.engineUsed || "Unknown"} Engine
+                </span>
+              </div>
+
+              {/* Request Payload */}
+              <div className="flex flex-col gap-2">
+                <h4 className="font-label-md text-label-md text-divine-ivory font-semibold text-xs uppercase tracking-wider">
+                  Raw Request Payload / Payload Context
+                </h4>
+                <div className="bg-surface-container-lowest/80 rounded-xl border border-white/5 p-4 max-h-[30vh] overflow-auto font-mono text-[11px] text-on-surface-variant/90 select-text whitespace-pre-wrap leading-relaxed">
+                  {JSON.stringify(selectedDebugMessage.response.debugMetadata?.rawRequest, null, 2)}
+                </div>
+              </div>
+
+              {/* Response Payload */}
+              <div className="flex flex-col gap-2">
+                <h4 className="font-label-md text-label-md text-divine-ivory font-semibold text-xs uppercase tracking-wider">
+                  Raw API JSON Response
+                </h4>
+                <div className="bg-surface-container-lowest/80 rounded-xl border border-white/5 p-4 max-h-[35vh] overflow-auto font-mono text-[11px] text-on-surface-variant/90 select-text whitespace-pre-wrap leading-relaxed">
+                  {JSON.stringify(selectedDebugMessage.response.debugMetadata?.rawResponse, null, 2)}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-white/5 bg-midnight-glass/50 flex justify-end">
+              <button
+                onClick={() => setSelectedDebugMessage(null)}
+                className="bg-primary text-on-primary px-5 py-2 rounded-full hover:scale-105 transition-all shadow-[0_0_10px_rgba(212,175,55,0.2)] font-semibold text-xs uppercase tracking-wider"
+              >
+                Close Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
